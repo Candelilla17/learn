@@ -6,6 +6,14 @@ My AI learning system from this video: [How I Use AI to Learn Things](https://ww
 
 This is a personal system I built for myself, shared as-is. Built as a pi configuration: the teaching philosophy encoded in a skill, a few small extensions, and agent definitions.
 
+## Educador Virtual (página HTML)
+
+`educador-virtual.html` es una versión en español de este sistema que funciona en cualquier navegador, sin instalar nada: descárgala y ábrela con doble clic.
+
+- **Tutor:** sigue el método de `skills/teach` (sondeo → plan con mapa de conceptos → enseñanza paso a paso con preguntas). Necesita una clave de API de Anthropic, que se guarda solo en tu navegador.
+- **Cuestionarios:** crea y juega cuestionarios con explicación y la opción “No lo sé”. Funciona sin clave.
+- **Cuaderno:** guarda la sesión y la descarga como `.md` (compatible con Obsidian).
+
 ## What's in it
 
 - `skills/teach/` — the philosophy and the process
