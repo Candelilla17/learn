@@ -213,7 +213,7 @@ function renderMd(el, md){
     const div = document.createElement('div'); div.className = 'mermaid'; div.textContent = code.textContent;
     code.parentElement.replaceWith(div);
   });
-  if (window.mermaid) { try { mermaid.run({ nodes: el.querySelectorAll('.mermaid') }); } catch(e){} }
+  if (window.mermaid) { try { const p = mermaid.run({ nodes: el.querySelectorAll('.mermaid'), suppressErrors: true }); if (p && p.catch) p.catch(()=>{}); } catch(e){} }
   if (window.renderMathInElement) {
     try { renderMathInElement(el, { delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false }); } catch(e){}
   }
@@ -282,10 +282,23 @@ function addLog(kind, text){ log.push({kind, text, t: new Date().toISOString()})
 function extractBlocks(text){
   const blocks = [];
   const clean = text.replace(/```(quiz|elige)\s*\n([\s\S]*?)```/g, (m, kind, body) => {
-    try { blocks.push({kind, data: JSON.parse(body.trim())}); } catch(e) { return m; }
+    let d; try { d = JSON.parse(body.trim()); } catch(e) { return m; }
+    d = normalizeBlock(kind, d); if (!d) return m;
+    blocks.push({kind, data: d});
     return '';
   }).trim();
   return {clean, blocks};
+}
+
+function normalizeBlock(kind, d){
+  if (!d || typeof d !== 'object') return null;
+  const opciones = Array.isArray(d.opciones) ? d.opciones.map(o => String(o ?? '')).filter(o => o.trim()) : [];
+  if (!d.pregunta || opciones.length < 2) return null;
+  if (kind === 'elige') return { pregunta: String(d.pregunta), opciones };
+  let c = d.correcta; if (!Array.isArray(c)) c = [c];
+  c = [...new Set(c.map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < opciones.length))];
+  if (!c.length) return null;
+  return { pregunta: String(d.pregunta), detalles: d.detalles ? String(d.detalles) : '', opciones, correcta: c, explicacion: d.explicacion ? String(d.explicacion) : '' };
 }
 
 function addMsg(role, text, opts={}){
@@ -379,28 +392,41 @@ function onTutorQuizAnswer(q, r){
 async function callClaude(){
   const key = store.get('key','');
   const learner = store.get('learner','');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const model = store.get('model','claude-opus-5-5');
+  const supportsFallback = model !== 'claude-haiku-5-5';
+  let res;
+  try { res = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
     headers:{
       'content-type':'application/json',
       'x-api-key': key,
       'anthropic-version':'2026-10-21',
-      'anthropic-beta':'server-side-fallback-2026-07-01',
+      ...(supportsFallback ? {'anthropic-beta':'server-side-fallback-2026-07-01'} : {}),
       'anthropic-dangerous-direct-browser-access':'true'
     },
     body: JSON.stringify({
-      model: store.get('model','claude-opus-5-5'),
+      model,
       max_tokens: 16000,
       output_config: { effort: 'low' },
-      fallbacks: 'default',
+      ...(supportsFallback ? { fallbacks: 'default' } : {}),
       system: SYSTEM + (learner ? `\n\nSobre el estudiante: ${learner}` : ''),
       messages: convo
     })
-  });
+  }); } catch(e) { throw new Error('No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.'); }
   const data = await res.json().catch(()=>({}));
-  if (!res.ok) throw new Error(data?.error?.message || ('Error HTTP ' + res.status));
+  if (!res.ok) {
+    const st = res.status, raw = data?.error?.message || '';
+    const why = st===401 ? 'La clave de API no es válida. Revísala en Ajustes.'
+      : st===403 ? 'Tu clave no tiene permiso para usar este modelo. Prueba otro modelo en Ajustes.'
+      : st===429 ? 'Demasiadas solicitudes o sin saldo en tu cuenta de Anthropic. Espera un momento o revisa tu saldo.'
+      : st===529 || st>=500 ? 'El servicio está saturado en este momento. Inténtalo de nuevo en unos segundos.'
+      : 'La solicitud no se pudo completar.';
+    throw new Error(why + (raw ? ` (Detalle: ${raw})` : ''));
+  }
   if (data.stop_reason === 'refusal') throw new Error('El modelo no pudo responder a esta solicitud. Intenta reformularla.');
-  return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+  const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+  if (!text) throw new Error('El tutor no devolvió respuesta. Inténtalo de nuevo.');
+  return text;
 }
 
 async function send(text, opts={}){
@@ -421,7 +447,10 @@ async function send(text, opts={}){
     el.scrollIntoView({behavior:'smooth', block:'start'});
   } catch(e){
     typing.remove(); convo.pop(); saveState();
-    addMsg('sys', '⚠️ ' + e.message);
+    const err = addMsg('sys', '⚠️ ' + e.message);
+    const retry = document.createElement('button'); retry.className='btn'; retry.style.marginTop='8px'; retry.textContent='Reintentar';
+    retry.onclick = () => { err.remove(); send(text, {...opts, silent:true}); };
+    err.appendChild(retry);
   } finally { busy = false; $('#sendBtn').disabled = false; }
 }
 
@@ -452,7 +481,7 @@ function confirmInline(){
 // restaurar sesión previa
 if (convo.length){
   $('#welcome').style.display='none'; $('#composer').style.display='block';
-  convo.forEach(m => { if (m.role==='assistant') addMsg('assistant', m.content, {answered:true});
+  convo.forEach((m, i) => { if (m.role==='assistant') addMsg('assistant', m.content, {answered: i < convo.length-1});
     else if (!m.content.startsWith('[Respuesta al cuestionario]')) addMsg('user', m.content); });
 }
 
