@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Educador Virtual</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --ink:#1f2328; --muted:#5f6670; --line:#e2e0d8;
+  --accent:#2f6fde; --accent-ink:#ffffff; --soft:#eaf1fd;
+  --ok:#1f8a4c; --ok-bg:#e6f5ec; --bad:#c23b32; --bad-bg:#fbeaea; --idk:#8a6d1f; --idk-bg:#fbf4dd;
+  --me:#e9eef8; --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181c; --panel:#1f2228; --ink:#e7e9ec; --muted:#9aa3ad; --line:#30343c;
+    --accent:#6b9cf0; --accent-ink:#0d1117; --soft:#1e2a3d;
+    --ok:#5cc98a; --ok-bg:#16301f; --bad:#f07a72; --bad-bg:#3a1c1b; --idk:#e0c26a; --idk-bg:#332b14;
+    --me:#232c3b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181c; --panel:#1f2228; --ink:#e7e9ec; --muted:#9aa3ad; --line:#30343c;
+  --accent:#6b9cf0; --accent-ink:#0d1117; --soft:#1e2a3d;
+  --ok:#5cc98a; --ok-bg:#16301f; --bad:#f07a72; --bad-bg:#3a1c1b; --idk:#e0c26a; --idk-bg:#332b14;
+  --me:#232c3b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{max-width:920px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bar h1{font-size:18px;margin:0;flex:1;min-width:160px}
+.bar h1 small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:none;border:1px solid transparent;color:var(--muted);padding:6px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:14px}
+nav button.on{background:var(--soft);color:var(--accent);border-color:var(--line)}
+main{max-width:920px;margin:0 auto;padding:16px}
+section{display:none}
+section.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.muted{color:var(--muted)}
+label{display:block;font-weight:600;margin:10px 0 4px;font-size:14px}
+input[type=text],input[type=password],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+textarea{resize:vertical}
+.btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:15px;border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grow{flex:1;min-width:0}
+
+/* Chat */
+#chat{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.msg{padding:12px 14px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);overflow-wrap:anywhere}
+.msg.me{background:var(--me);align-self:flex-end;max-width:88%}
+.msg.sys{background:none;border-style:dashed;color:var(--muted);font-size:14px}
+.msg .who{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.msg p:first-child{margin-top:0}.msg p:last-child{margin-bottom:0}
+.msg pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto}
+.msg .mermaid{background:#fff;border-radius:8px;padding:8px;overflow:auto;text-align:center}
+.composer{position:sticky;bottom:0;background:var(--bg);padding:8px 0 12px}
+.composer .row{align-items:flex-end}
+.typing{color:var(--muted);font-style:italic}
+
+/* Quiz */
+.quiz{border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-top:10px;background:var(--bg)}
+.quiz h3{margin:0 0 4px;font-size:16px}
+.quiz .details{color:var(--muted);font-size:14px;margin-bottom:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin:6px 0;cursor:pointer}
+.opt .n{font-weight:700;color:var(--muted);min-width:1.4em}
+.opt.sel{border-color:var(--accent);background:var(--soft)}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.opt:disabled{cursor:default}
+.quiz h3 p,.opt p,.feedback p{margin:0}
+.feedback p+p{margin-top:6px}
+#quizSelect{min-width:200px}
+.opt .katex,.quiz h3 .katex{font-size:1.2em}
+.opt.idk{border-style:dashed;color:var(--muted)}
+.feedback{margin-top:10px;padding:10px 12px;border-radius:8px}
+.feedback.ok{background:var(--ok-bg);color:var(--ok)}
+.feedback.bad{background:var(--bad-bg);color:var(--bad)}
+.feedback.idk{background:var(--idk-bg);color:var(--idk)}
+.feedback .exp{color:var(--ink);margin-top:6px}
+
+/* Quiz builder */
+.qitem{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
+.qopt{display:flex;gap:8px;align-items:center;margin:4px 0}
+.qopt input[type=text]{flex:1}
+.score{font-size:28px;font-weight:700}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--accent)}
+details summary{cursor:pointer;font-weight:600}
+@media (max-width:560px){ .msg.me{max-width:100%} .bar h1 small{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>🎓 Educador Virtual <small>Aprende entendiendo, no memorizando</small></h1>
+    <nav>
+      <button data-tab="tutor" class="on">Tutor</button>
+      <button data-tab="quiz">Cuestionarios</button>
+      <button data-tab="notes">Cuaderno</button>
+      <button data-tab="config">Ajustes</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ===================== TUTOR ===================== -->
+<section id="tutor" class="on">
+  <div class="card" id="welcome">
+    <strong>¿Qué quieres aprender hoy?</strong>
+    <p class="muted" style="margin:6px 0 10px">El tutor sigue tres fases: primero averigua qué sabes (con preguntas), luego te propone un plan con un mapa de conceptos, y después te enseña paso a paso comprobando que cada idea quede firme.</p>
+    <div class="row">
+      <input type="text" id="topic" class="grow" placeholder="Ej.: fracciones, la fotosíntesis, cómo funciona internet…">
+      <button class="btn primary" id="startBtn">Empezar</button>
+    </div>
+    <p class="muted" id="needKey" style="font-size:14px;margin:10px 0 0;display:none">Para usar el tutor necesitas una clave de API de Anthropic. Agrégala en <a href="#" data-go="config">Ajustes</a>. Mientras tanto, puedes usar la pestaña <a href="#" data-go="quiz">Cuestionarios</a> sin clave.</p>
+  </div>
+  <div id="chat"></div>
+  <div class="composer" id="composer" style="display:none">
+    <div class="row">
+      <textarea id="input" class="grow" rows="2" placeholder="Escribe tu respuesta o pregunta… (Enter para enviar, Mayús+Enter para nueva línea)"></textarea>
+      <button class="btn primary" id="sendBtn">Enviar</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn" id="newBtn" style="font-size:13px;padding:5px 10px">Nueva sesión</button>
+      <span class="muted" style="font-size:13px">La conversación se guarda en el Cuaderno.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CUESTIONARIOS ===================== -->
+<section id="quiz">
+  <div class="card">
+    <strong>Cuestionarios (funcionan sin internet ni clave)</strong>
+    <p class="muted" style="margin:6px 0 0">Crea tus propias preguntas de opción múltiple con su explicación, o juega el cuestionario de ejemplo. Las opciones se mezclan solas y siempre puedes elegir “No lo sé” en vez de adivinar.</p>
+  </div>
+  <div class="card">
+    <div class="row">
+      <select id="quizSelect" class="grow"></select>
+      <button class="btn primary" id="playBtn">Jugar</button>
+      <button class="btn" id="editBtn">Editar</button>
+      <button class="btn" id="newQuizBtn">Nuevo</button>
+    </div>
+  </div>
+  <div id="quizArea"></div>
+</section>
+
+<!-- ===================== CUADERNO ===================== -->
+<section id="notes">
+  <div class="card">
+    <div class="row">
+      <strong class="grow">Cuaderno de la sesión</strong>
+      <button class="btn" id="dlNotes">Descargar .md</button>
+      <button class="btn" id="copyNotes">Copiar</button>
+    </div>
+    <p class="muted" style="margin:6px 0 0;font-size:14px">Todo lo que pasa en el tutor (explicaciones, preguntas y tus respuestas) queda aquí, listo para guardar o abrir en Obsidian.</p>
+  </div>
+  <div class="card"><div id="notesView" class="msg" style="border:0;padding:0"></div></div>
+</section>
+
+<!-- ===================== AJUSTES ===================== -->
+<section id="config">
+  <div class="card">
+    <strong>Clave de API de Anthropic</strong>
+    <p class="muted" style="margin:6px 0 0;font-size:14px">El tutor usa Claude. Consigue una clave en <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. La clave se guarda solo en este navegador y se envía únicamente a api.anthropic.com.</p>
+    <label for="apiKey">Clave</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
+    <label for="model">Modelo</label>
+    <select id="model">
+      <option value="claude-opus-5-5">Claude Opus 5.5 (recomendado)</option>
+      <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (más económico)</option>
+      <option value="claude-haiku-5-5">Claude Haiku 5.5 (el más rápido y barato)</option>
+    </select>
+    <label for="learner">¿Cómo quieres que te trate el tutor? (opcional)</label>
+    <input type="text" id="learner" placeholder="Ej.: Soy docente de primaria; explícame con ejemplos cotidianos.">
+    <label for="theme">Tema</label>
+    <select id="theme"><option value="">Automático</option><option value="light">Claro</option><option value="dark">Oscuro</option></select>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary" id="saveCfg">Guardar</button>
+      <button class="btn" id="clearKey">Borrar clave</button>
+      <span id="cfgMsg" class="muted"></span>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('ev_'+k); return v===null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('ev_'+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem('ev_'+k); }catch(e){} }
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+if (window.mermaid) mermaid.initialize({ startOnLoad:false, theme:'default', securityLevel:'strict' });
+
+function renderMd(el, md){
+  const html = window.marked ? marked.parse(md, {breaks:true}) : esc(md).replace(/\n/g,'<br>');
+  el.innerHTML = window.DOMPurify ? DOMPurify.sanitize(html) : html;
+  // mermaid
+  el.querySelectorAll('pre code.language-mermaid').forEach(code => {
+    const div = document.createElement('div'); div.className = 'mermaid'; div.textContent = code.textContent;
+    code.parentElement.replaceWith(div);
+  });
+  if (window.mermaid) { try { mermaid.run({ nodes: el.querySelectorAll('.mermaid') }); } catch(e){} }
+  if (window.renderMathInElement) {
+    try { renderMathInElement(el, { delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false }); } catch(e){}
+  }
+}
+
+/* ---------- pestañas ---------- */
+function go(tab){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab===tab));
+  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('on', s.id===tab));
+  if (tab==='notes') renderNotes();
+  store.set('tab', tab);
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.tab));
+document.addEventListener('click', e => { const a = e.target.closest('[data-go]'); if (a){ e.preventDefault(); go(a.dataset.go); } });
+
+/* ---------- ajustes ---------- */
+function applyTheme(t){ if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+$('#apiKey').value = store.get('key','');
+$('#model').value = store.get('model','claude-opus-5-5');
+$('#learner').value = store.get('learner','');
+$('#theme').value = store.get('theme','');
+applyTheme(store.get('theme',''));
+$('#saveCfg').onclick = () => {
+  store.set('key', $('#apiKey').value.trim()); store.set('model', $('#model').value);
+  store.set('learner', $('#learner').value.trim()); store.set('theme', $('#theme').value);
+  applyTheme($('#theme').value); $('#cfgMsg').textContent = 'Guardado ✓'; updateKeyHint();
+  setTimeout(()=>$('#cfgMsg').textContent='', 2000);
+};
+$('#clearKey').onclick = () => { store.del('key'); $('#apiKey').value=''; $('#cfgMsg').textContent='Clave borrada'; updateKeyHint(); };
+function updateKeyHint(){ $('#needKey').style.display = store.get('key','') ? 'none' : 'block'; }
+updateKeyHint();
+
+/* ---------- el tutor (Claude) ---------- */
+const SYSTEM = `Eres un educador virtual que enseña en español. Tu meta no es que el estudiante recite datos, sino que ENTIENDA: que cada hecho se pueda derivar de bases que ya acepta, conectado a su modelo mental.
+
+Dos principios guían cada explicación:
+1) Verdades incondicionales primero. Empieza por los hechos más básicos que se puedan aceptar tal cual, sin matices (afirmaciones universales tipo "todo X es Y", o definiciones reales). Confirma que el estudiante los acepta antes de construir encima.
+2) "¿Cómo pude haberlo descubierto yo?". Nada aparece de la nada: motiva cada paso (¿por qué hacemos esto?, ¿qué problema resuelve?), al estilo de 3Blue1Brown. Usa el modo socrático (pregunta y deja que intente) cuando pueda razonarlo; si no, narra el descubrimiento tú.
+
+Proceso de cada sesión, en orden:
+FASE 1 – Sondeo: averigua su nivel con preguntas de cuestionario cortas, una por mensaje. Busca el BORDE de lo que sabe: si acierta, sube mucho la dificultad; si falla, investiga alrededor. Pregunta también qué quiere lograr exactamente.
+FASE 2 – Plan: presenta en pocas frases qué vas a enseñar y en qué orden, y un mapa de dependencias como bloque \`\`\`mermaid (graph TD, pocas cajas, etiquetas cortas: verdades base arriba, su objetivo abajo). Espera su visto bueno.
+FASE 3 – Enseñanza: avanza nodo por nodo: motiva → establece → conecta con lo anterior → comprueba con una pregunta de cuestionario. Si falla, arregla ese nodo antes de seguir.
+
+Sé breve: mensajes cortos, un paso a la vez. Usa LaTeX para matemáticas ($x^2$ en línea, $$...$$ aparte). Si no estás seguro de un dato, dilo con honestidad.
+
+PREGUNTAS DE CUESTIONARIO: cuando una pregunta tenga respuesta correcta, NO la escribas como texto; agrega al final del mensaje un bloque exactamente así (JSON válido):
+\`\`\`quiz
+{"pregunta":"...","detalles":"(opcional)","opciones":["...","...","..."],"correcta":[0],"explicacion":"..."}
+\`\`\`
+"correcta" es la lista de índices (desde 0) de las opciones correctas; si hay más de una, el estudiante debe marcar todas. Reglas para las opciones: todas con la misma forma y longitud, ninguna con justificación (el porqué va solo en "explicacion"), cada distractor es un error real y plausible, sin negritas en una sola. La interfaz agrega sola la opción "No lo sé" y mezcla el orden.
+
+PREGUNTAS SIN RESPUESTA CORRECTA (preferencias, rumbo): agrega un bloque
+\`\`\`elige
+{"pregunta":"...","opciones":["...","..."]}
+\`\`\`
+El estudiante también podrá escribir libremente. Usa como máximo un bloque quiz o elige por mensaje, y no repitas su contenido en el texto.`;
+
+let convo = store.get('convo', []);     // [{role, content}]
+let log = store.get('log', []);         // [{kind, text}]
+let busy = false;
+
+function saveState(){ store.set('convo', convo); store.set('log', log); }
+function addLog(kind, text){ log.push({kind, text, t: new Date().toISOString()}); saveState(); }
+
+function extractBlocks(text){
+  const blocks = [];
+  const clean = text.replace(/```(quiz|elige)\s*\n([\s\S]*?)```/g, (m, kind, body) => {
+    try { blocks.push({kind, data: JSON.parse(body.trim())}); } catch(e) { return m; }
+    return '';
+  }).trim();
+  return {clean, blocks};
+}
+
+function addMsg(role, text, opts={}){
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role==='user' ? 'me' : role==='sys' ? 'sys' : 'bot');
+  const who = document.createElement('div'); who.className='who';
+  who.textContent = role==='user' ? 'Tú' : role==='sys' ? '' : 'Tutor';
+  if (role!=='sys') div.appendChild(who);
+  const body = document.createElement('div'); div.appendChild(body);
+  if (role==='assistant'){
+    const {clean, blocks} = extractBlocks(text);
+    renderMd(body, clean || '');
+    blocks.forEach(b => div.appendChild(b.kind==='quiz' ? quizWidget(b.data, opts.answered, onTutorQuizAnswer) : choiceWidget(b.data, opts.answered)));
+  } else if (role==='user') {
+    body.textContent = text;
+  } else { body.textContent = text; }
+  $('#chat').appendChild(div);
+  return div;
+}
+
+function quizWidget(q, locked, onAnswer){
+  const wrap = document.createElement('div'); wrap.className='quiz';
+  const multi = (q.correcta||[]).length > 1;
+  wrap.innerHTML = `<h3></h3>${q.detalles?'<div class="details"></div>':''}<div class="opts"></div>`;
+  renderMd(wrap.querySelector('h3'), q.pregunta||'');
+  if (q.detalles) renderMd(wrap.querySelector('.details'), q.detalles + (multi?'  \n*(Marca todas las correctas)*':''));
+  else if (multi){ const d=document.createElement('div'); d.className='details'; d.textContent='(Marca todas las correctas)'; wrap.insertBefore(d, wrap.querySelector('.opts')); }
+  const order = shuffle(q.opciones.map((t,i)=>i));
+  const optsEl = wrap.querySelector('.opts');
+  const chosen = new Set();
+  const btns = [];
+  order.forEach((orig, k) => {
+    const b = document.createElement('button'); b.className='opt'; b.type='button';
+    b.innerHTML = `<span class="n">${k+1}.</span><span class="t"></span>`;
+    renderMd(b.querySelector('.t'), q.opciones[orig]);
+    b.dataset.orig = orig;
+    b.onclick = () => {
+      if (multi){ chosen.has(orig)?chosen.delete(orig):chosen.add(orig); b.classList.toggle('sel'); submit.disabled = chosen.size===0; }
+      else { chosen.clear(); chosen.add(orig); finish(false); }
+    };
+    optsEl.appendChild(b); btns.push(b);
+  });
+  const idk = document.createElement('button'); idk.className='opt idk'; idk.type='button';
+  idk.innerHTML = '<span class="n">0.</span><span>No lo sé</span>';
+  idk.onclick = () => finish(true);
+  optsEl.appendChild(idk);
+  const submit = document.createElement('button'); submit.className='btn primary'; submit.textContent='Comprobar'; submit.disabled=true;
+  submit.onclick = () => finish(false);
+  if (multi) wrap.appendChild(submit);
+
+  function finish(dontKnow){
+    const correctSet = new Set(q.correcta);
+    const ok = !dontKnow && chosen.size===correctSet.size && [...chosen].every(i=>correctSet.has(i));
+    btns.forEach(b => { b.disabled = true; const o=+b.dataset.orig;
+      if (correctSet.has(o)) b.classList.add('right'); else if (chosen.has(o)) b.classList.add('wrong'); });
+    idk.disabled = true; submit.remove();
+    const fb = document.createElement('div');
+    fb.className = 'feedback ' + (dontKnow ? 'idk' : ok ? 'ok' : 'bad');
+    fb.innerHTML = `<strong>${dontKnow ? '🤔 Sin problema, ahora lo vemos.' : ok ? '✓ ¡Correcto!' : '✗ No exactamente.'}</strong><div class="exp"></div>`;
+    renderMd(fb.querySelector('.exp'), (!ok ? '**Respuesta correcta:** ' + q.correcta.map(i=>q.opciones[i]).join(' · ') + '\n\n' : '') + (q.explicacion||''));
+    wrap.appendChild(fb);
+    if (onAnswer) onAnswer(q, {ok, dontKnow, chosen:[...chosen]});
+  }
+  if (locked){ btns.forEach(b=>b.disabled=true); idk.disabled=true; submit.remove();
+    const n=document.createElement('div'); n.className='muted'; n.style.fontSize='13px'; n.textContent='(Pregunta ya respondida)'; wrap.appendChild(n); }
+  return wrap;
+}
+
+function choiceWidget(c, locked){
+  const wrap = document.createElement('div'); wrap.className='quiz';
+  wrap.innerHTML = '<h3></h3><div class="opts"></div><div class="details" style="margin-top:6px">…o escribe tu propia respuesta abajo.</div>';
+  renderMd(wrap.querySelector('h3'), c.pregunta||'');
+  (c.opciones||[]).forEach((t,i) => {
+    const b = document.createElement('button'); b.className='opt'; b.type='button'; b.disabled=!!locked;
+    b.innerHTML = `<span class="n">${i+1}.</span><span class="t"></span>`; renderMd(b.querySelector('.t'), t);
+    b.onclick = () => { wrap.querySelectorAll('.opt').forEach(x=>x.disabled=true); b.classList.add('sel'); send(t); };
+    wrap.querySelector('.opts').appendChild(b);
+  });
+  return wrap;
+}
+
+function onTutorQuizAnswer(q, r){
+  const picked = r.chosen.map(i=>`"${q.opciones[i]}"`).join(', ');
+  const msg = r.dontKnow
+    ? `[Respuesta al cuestionario] Pregunta: "${q.pregunta}". Elegí: No lo sé.`
+    : `[Respuesta al cuestionario] Pregunta: "${q.pregunta}". Elegí: ${picked}. Resultado: ${r.ok?'CORRECTO':'INCORRECTO'} (la correcta era ${q.correcta.map(i=>`"${q.opciones[i]}"`).join(', ')}).`;
+  addLog('quiz', `**Cuestionario:** ${q.pregunta}\n\n- Mi respuesta: ${r.dontKnow?'No lo sé':picked} → ${r.dontKnow?'🤔':r.ok?'✓':'✗'}\n- Correcta: ${q.correcta.map(i=>q.opciones[i]).join(' · ')}\n- ${q.explicacion||''}`);
+  send(msg, {silent:true});
+}
+
+async function callClaude(){
+  const key = store.get('key','');
+  const learner = store.get('learner','');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key': key,
+      'anthropic-version':'2026-10-21',
+      'anthropic-beta':'server-side-fallback-2026-07-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({
+      model: store.get('model','claude-opus-5-5'),
+      max_tokens: 16000,
+      output_config: { effort: 'low' },
+      fallbacks: 'default',
+      system: SYSTEM + (learner ? `\n\nSobre el estudiante: ${learner}` : ''),
+      messages: convo
+    })
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(data?.error?.message || ('Error HTTP ' + res.status));
+  if (data.stop_reason === 'refusal') throw new Error('El modelo no pudo responder a esta solicitud. Intenta reformularla.');
+  return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+}
+
+async function send(text, opts={}){
+  text = (text||'').trim(); if (!text || busy) return;
+  if (!store.get('key','')){ updateKeyHint(); go('config'); $('#apiKey').focus(); return; }
+  convo.push({role:'user', content:text});
+  if (!opts.silent){ addMsg('user', text); addLog('user', text); }
+  saveState();
+  busy = true; $('#sendBtn').disabled = true;
+  const typing = addMsg('sys', 'El tutor está pensando…'); typing.classList.add('typing');
+  typing.scrollIntoView({behavior:'smooth', block:'end'});
+  try {
+    const reply = await callClaude();
+    typing.remove();
+    convo.push({role:'assistant', content: reply}); saveState();
+    const el = addMsg('assistant', reply);
+    addLog('assistant', extractBlocks(reply).clean);
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+  } catch(e){
+    typing.remove(); convo.pop(); saveState();
+    addMsg('sys', '⚠️ ' + e.message);
+  } finally { busy = false; $('#sendBtn').disabled = false; }
+}
+
+function startSession(){
+  const topic = $('#topic').value.trim(); if (!topic) { $('#topic').focus(); return; }
+  if (!store.get('key','')){ updateKeyHint(); go('config'); return; }
+  convo = []; log = []; $('#chat').innerHTML = '';
+  addLog('title', topic);
+  $('#welcome').style.display='none'; $('#composer').style.display='block';
+  send(`Quiero aprender: ${topic}`);
+}
+$('#startBtn').onclick = startSession;
+$('#topic').addEventListener('keydown', e => { if (e.key==='Enter') startSession(); });
+$('#sendBtn').onclick = () => { const t=$('#input').value; $('#input').value=''; send(t); };
+$('#input').addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#sendBtn').click(); } });
+$('#newBtn').onclick = () => {
+  if (!confirmInline()) return;
+  convo=[]; log=[]; saveState(); $('#chat').innerHTML=''; $('#welcome').style.display='block'; $('#composer').style.display='none'; $('#topic').value='';
+};
+let pendingReset = false;
+function confirmInline(){
+  if (pendingReset) { pendingReset=false; $('#newBtn').textContent='Nueva sesión'; return true; }
+  pendingReset = true; $('#newBtn').textContent='¿Seguro? Pulsa otra vez';
+  setTimeout(()=>{ pendingReset=false; $('#newBtn').textContent='Nueva sesión'; }, 3000);
+  return false;
+}
+
+// restaurar sesión previa
+if (convo.length){
+  $('#welcome').style.display='none'; $('#composer').style.display='block';
+  convo.forEach(m => { if (m.role==='assistant') addMsg('assistant', m.content, {answered:true});
+    else if (!m.content.startsWith('[Respuesta al cuestionario]')) addMsg('user', m.content); });
+}
+
+/* ---------- cuaderno ---------- */
+function notesMd(){
+  const title = (log.find(l=>l.kind==='title')||{}).text || 'Sesión de aprendizaje';
+  let md = `# ${title}\n\n_${new Date().toLocaleDateString('es')}_\n\n`;
+  log.filter(l=>l.kind!=='title').forEach(l => {
+    if (l.kind==='user') md += `> **Yo:** ${l.text.replace(/\n/g,'\n> ')}\n\n`;
+    else if (l.kind==='assistant') md += `${l.text}\n\n---\n\n`;
+    else if (l.kind==='quiz') md += `${l.text}\n\n`;
+  });
+  return md;
+}
+function renderNotes(){ const v=$('#notesView'); if (!log.length) { v.innerHTML='<p class="muted">Aún no hay nada. Empieza una sesión en la pestaña Tutor.</p>'; return; } renderMd(v, notesMd()); }
+$('#dlNotes').onclick = () => {
+  const blob = new Blob([notesMd()], {type:'text/markdown'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'cuaderno-' + new Date().toISOString().slice(0,10) + '.md'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('#copyNotes').onclick = async () => { try { await navigator.clipboard.writeText(notesMd()); $('#copyNotes').textContent='Copiado ✓'; } catch(e){ $('#copyNotes').textContent='No se pudo copiar'; } setTimeout(()=>$('#copyNotes').textContent='Copiar',2000); };
+
+/* ---------- cuestionarios propios ---------- */
+const SAMPLE = {
+  titulo: 'Ejemplo: fracciones',
+  preguntas: [
+    {pregunta:'¿Qué fracción es mayor?', opciones:['$\\frac{3}{4}$','$\\frac{2}{3}$','$\\frac{5}{8}$'], correcta:[0], explicacion:'Con denominador común 24: $\\frac{18}{24} > \\frac{16}{24} > \\frac{15}{24}$.'},
+    {pregunta:'¿Cuánto es $\\frac{1}{2} + \\frac{1}{3}$?', opciones:['$\\frac{5}{6}$','$\\frac{2}{5}$','$\\frac{1}{5}$'], correcta:[0], explicacion:'Se busca un denominador común (6): $\\frac{3}{6} + \\frac{2}{6} = \\frac{5}{6}$. Sumar numeradores y denominadores por separado ($\\frac{2}{5}$) es el error típico.'},
+    {pregunta:'¿Cuáles son equivalentes a $\\frac{1}{2}$?', opciones:['$\\frac{2}{4}$','$\\frac{5}{10}$','$\\frac{2}{3}$','$\\frac{3}{5}$'], correcta:[0,1], explicacion:'Multiplicar numerador y denominador por el mismo número no cambia el valor: $\\frac{1\\cdot2}{2\\cdot2}$ y $\\frac{1\\cdot5}{2\\cdot5}$.'}
+  ]
+};
+let quizzes = store.get('quizzes', null) || [SAMPLE];
+function saveQuizzes(){ store.set('quizzes', quizzes); }
+function fillSelect(sel){ const s=$('#quizSelect'); s.innerHTML=''; quizzes.forEach((q,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=q.titulo||('Cuestionario '+(i+1)); s.appendChild(o); }); if (sel!==undefined) s.value=sel; }
+fillSelect();
+
+function play(i){
+  const qz = quizzes[i]; const area = $('#quizArea'); area.innerHTML='';
+  if (!qz || !qz.preguntas.length){ area.innerHTML='<div class="card muted">Este cuestionario no tiene preguntas todavía. Pulsa Editar.</div>'; return; }
+  let idx=0, right=0, idk=0;
+  const head = document.createElement('div'); head.className='card'; area.appendChild(head);
+  const box = document.createElement('div'); area.appendChild(box);
+  function step(){
+    head.innerHTML = `<div class="row"><strong class="grow"></strong><span class="pill">Pregunta ${idx+1} de ${qz.preguntas.length}</span></div>`;
+    head.querySelector('strong').textContent = qz.titulo;
+    box.innerHTML='';
+    const card = document.createElement('div'); card.className='card'; box.appendChild(card);
+    card.appendChild(quizWidget(qz.preguntas[idx], false, (q,r) => {
+      if (r.ok) right++; if (r.dontKnow) idk++;
+      const nx = document.createElement('button'); nx.className='btn primary'; nx.style.marginTop='10px';
+      nx.textContent = idx+1 < qz.preguntas.length ? 'Siguiente →' : 'Ver resultado';
+      nx.onclick = () => { idx++; idx < qz.preguntas.length ? step() : done(); };
+      card.appendChild(nx); nx.focus();
+    }));
+  }
+  function done(){
+    const n = qz.preguntas.length;
+    head.innerHTML = `<div class="score">${right} / ${n}</div><div class="muted">${idk ? idk+' respondidas con “No lo sé”. ' : ''}${right===n ? '¡Excelente! Lo tienes dominado.' : 'Repasa las explicaciones y vuelve a intentarlo.'}</div>`;
+    box.innerHTML=''; const again = document.createElement('button'); again.className='btn primary'; again.textContent='Repetir'; again.onclick=()=>play(i); box.appendChild(again);
+  }
+  step();
+}
+
+function edit(i){
+  const qz = JSON.parse(JSON.stringify(quizzes[i]));
+  const area = $('#quizArea'); area.innerHTML='';
+  const card = document.createElement('div'); card.className='card'; area.appendChild(card);
+  function draw(){
+    card.innerHTML = `<label>Título</label><input type="text" class="t">
+      <div class="qs"></div>
+      <div class="row" style="margin-top:10px"><button class="btn add">+ Agregar pregunta</button><span class="grow"></span>
+      <button class="btn del">Eliminar cuestionario</button><button class="btn primary save">Guardar</button></div>
+      <p class="muted" style="font-size:13px">Marca la casilla de la(s) opción(es) correcta(s). Puedes usar $LaTeX$ para matemáticas.</p>`;
+    card.querySelector('.t').value = qz.titulo; card.querySelector('.t').oninput = e => qz.titulo = e.target.value;
+    const qs = card.querySelector('.qs');
+    qz.preguntas.forEach((p, pi) => {
+      const it = document.createElement('div'); it.className='qitem';
+      it.innerHTML = `<div class="row"><strong class="grow">Pregunta ${pi+1}</strong><button class="btn rm" style="padding:4px 10px;font-size:13px">Quitar</button></div>
+        <input type="text" class="pq" placeholder="Escribe la pregunta"><div class="os"></div>
+        <button class="btn ao" style="padding:4px 10px;font-size:13px;margin-top:4px">+ opción</button>
+        <label>Explicación (se muestra después de responder)</label><textarea class="pe" rows="2"></textarea>`;
+      it.querySelector('.pq').value = p.pregunta; it.querySelector('.pq').oninput = e => p.pregunta = e.target.value;
+      it.querySelector('.pe').value = p.explicacion||''; it.querySelector('.pe').oninput = e => p.explicacion = e.target.value;
+      it.querySelector('.rm').onclick = () => { qz.preguntas.splice(pi,1); draw(); };
+      it.querySelector('.ao').onclick = () => { p.opciones.push(''); draw(); };
+      const os = it.querySelector('.os');
+      p.opciones.forEach((o, oi) => {
+        const r = document.createElement('div'); r.className='qopt';
+        r.innerHTML = `<input type="checkbox" title="Correcta"><input type="text" placeholder="Opción ${oi+1}"><button class="btn" style="padding:4px 9px" title="Quitar opción">×</button>`;
+        const [cb, tx, x] = r.children;
+        cb.checked = p.correcta.includes(oi);
+        cb.onchange = () => { p.correcta = cb.checked ? [...new Set([...p.correcta, oi])] : p.correcta.filter(c=>c!==oi); };
+        tx.value = o; tx.oninput = e => p.opciones[oi] = e.target.value;
+        x.onclick = () => { p.opciones.splice(oi,1); p.correcta = p.correcta.filter(c=>c!==oi).map(c=>c>oi?c-1:c); draw(); };
+        os.appendChild(r);
+      });
+      qs.appendChild(it);
+    });
+    card.querySelector('.add').onclick = () => { qz.preguntas.push({pregunta:'', opciones:['',''], correcta:[0], explicacion:''}); draw(); };
+    card.querySelector('.save').onclick = () => {
+      const bad = qz.preguntas.findIndex(p => !p.pregunta.trim() || p.opciones.filter(o=>o.trim()).length<2 || !p.correcta.length);
+      if (bad>=0){ msg.textContent = `Revisa la pregunta ${bad+1}: necesita texto, al menos 2 opciones y una correcta.`; return; }
+      qz.preguntas.forEach(p => { const keep = p.opciones.map((o,k)=>o.trim()?k:-1).filter(k=>k>=0);
+        p.correcta = p.correcta.filter(c=>keep.includes(c)).map(c=>keep.indexOf(c)); p.opciones = keep.map(k=>p.opciones[k]); });
+      if (qz.preguntas.some(p=>!p.correcta.length)){ msg.textContent = 'Cada pregunta necesita al menos una opción correcta con texto.'; return; }
+      quizzes[i] = qz; saveQuizzes(); fillSelect(i); msg.textContent = 'Guardado ✓';
+    };
+    card.querySelector('.del').onclick = function(){
+      if (this.dataset.sure){ quizzes.splice(i,1); if (!quizzes.length) quizzes=[SAMPLE]; saveQuizzes(); fillSelect(0); area.innerHTML=''; return; }
+      this.dataset.sure='1'; this.textContent='¿Seguro? Pulsa otra vez';
+    };
+    const msg = document.createElement('div'); msg.className='muted'; card.appendChild(msg);
+  }
+  draw();
+}
+$('#playBtn').onclick = () => play(+$('#quizSelect').value);
+$('#editBtn').onclick = () => edit(+$('#quizSelect').value);
+$('#newQuizBtn').onclick = () => { quizzes.push({titulo:'Mi cuestionario', preguntas:[{pregunta:'', opciones:['',''], correcta:[0], explicacion:''}]}); saveQuizzes(); fillSelect(quizzes.length-1); edit(quizzes.length-1); };
+
+go(store.get('tab','tutor'));
+</script>
+</body>
+</html>
