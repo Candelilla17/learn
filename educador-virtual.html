@@ -237,10 +237,12 @@ $('#learner').value = store.get('learner','');
 $('#theme').value = store.get('theme','');
 applyTheme(store.get('theme',''));
 $('#saveCfg').onclick = () => {
-  store.set('key', $('#apiKey').value.trim()); store.set('model', $('#model').value);
+  const k = $('#apiKey').value.replace(/[\s"'`]/g, ''); $('#apiKey').value = k;
+  if (k && !k.startsWith('sk-ant-')) { $('#cfgMsg').textContent = '⚠️ Esa no parece una clave de API: debe empezar con "sk-ant-". Créala en console.anthropic.com → API Keys.'; return; }
+  store.set('key', k); store.set('model', $('#model').value);
   store.set('learner', $('#learner').value.trim()); store.set('theme', $('#theme').value);
   applyTheme($('#theme').value); $('#cfgMsg').textContent = 'Guardado ✓'; updateKeyHint();
-  setTimeout(()=>$('#cfgMsg').textContent='', 2000);
+  setTimeout(()=>$('#cfgMsg').textContent='', 2500);
 };
 $('#clearKey').onclick = () => { store.del('key'); $('#apiKey').value=''; $('#cfgMsg').textContent='Clave borrada'; updateKeyHint(); };
 function updateKeyHint(){ $('#needKey').style.display = store.get('key','') ? 'none' : 'block'; }
@@ -416,7 +418,7 @@ async function callClaude(){
   const data = await res.json().catch(()=>({}));
   if (!res.ok) {
     const st = res.status, raw = data?.error?.message || '';
-    const why = st===401 ? 'La clave de API no es válida. Revísala en Ajustes.'
+    const why = st===401 ? 'La clave de API no es válida. Copia de nuevo la clave completa desde console.anthropic.com → API Keys (empieza con sk-ant-), pégala en Ajustes y pulsa Guardar. Una suscripción de Claude.ai no sirve: hace falta una clave de API con saldo.'
       : st===403 ? 'Tu clave no tiene permiso para usar este modelo. Prueba otro modelo en Ajustes.'
       : st===429 ? 'Demasiadas solicitudes o sin saldo en tu cuenta de Anthropic. Espera un momento o revisa tu saldo.'
       : st===529 || st>=500 ? 'El servicio está saturado en este momento. Inténtalo de nuevo en unos segundos.'
